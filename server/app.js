@@ -33,4 +33,45 @@ app.get("/popular", (req, res) => {
     res.send(sortedLinks);
 })
 
+// Get a single link by position in the array
+app.get("/links/:index", (req, res) => {
+
+    // Extract the index from the URL
+    const index = parseInt(req.params.index);
+
+    // If the index value is within bounds
+    if (0 <= index && index < links.length) {
+
+        // Send the relevant link
+        res.send(links[index]);
+
+    } else {
+
+        // Report the error in a user-friendly way
+        res.status(404).send({ error: "Unable to locate link." })
+    }
+
+})
+
+// Delete a link based on its position in the array
+// A bit hacky - if we had a real database, or even a better fake one, we'd be using IDs
+app.delete("/links/:index", (req, res) => {
+
+    // Extract the index from the URL
+    const index = parseInt(req.params.index);
+
+    // If the index value is within bounds
+    if (0 <= index && index < links.length) {
+
+        // Snip out one element at the index position
+        links = links.splice(index, 1);
+
+    } else {
+
+        // Report the error in a user-friendly way
+        res.status(404).send({ error: "Unable to delete link." })
+    }
+
+})
+
 module.exports = app;
