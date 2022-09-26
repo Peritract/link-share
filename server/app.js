@@ -3,7 +3,8 @@ const cors = require("cors");
 
 const logRoute = require('./logRoute'); // middleware
 
-const links = require("./links"); // Hard-coded data
+let links = require("./links"); // Hard-coded data
+let nextId = links.length; // Current value for the id of new posts
 
 // Create the app
 const app = express();
@@ -15,7 +16,7 @@ app.use(logRoute) // Log each route as the request comes in
 
 // Base root
 app.get("/", (req, res) => {
-    res.send({ message: "Welcome to the link sharing API" });
+    res.send({ message: "Welcome to the link sharing API." });
 })
 
 // Get all the links in posted order
@@ -33,17 +34,42 @@ app.get("/popular", (req, res) => {
     res.send(sortedLinks);
 })
 
-// Get a single link by position in the array
-app.get("/links/:index", (req, res) => {
+// Create a new link
+app.post("/links", (req, res) => {
 
-    // Extract the index from the URL
-    const index = parseInt(req.params.index);
+    // Extract the data
+    const data = req.body;
 
-    // If the index value is within bounds
-    if (0 <= index && index < links.length) {
+    // Add an id to the data
+    data["id"] = nextId;
 
-        // Send the relevant link
-        res.send(links[index]);
+    // Set the starting number of votes
+    data["votes"] = 0;
+
+    // Increment the nextId for next time
+    nextId += 1;
+
+    // Add the link to the collection
+    links.push(data);
+
+    // Report success
+    res.status(201).send(data);
+})
+
+// Get a single link by id
+app.get("/links/:id", (req, res) => {
+
+    // Extract the id from the URL
+    const id = parseInt(req.params.id);
+
+    // Filter the links for the relevant id
+    const filteredLinks = links.filter(l => l.id == id);
+
+    // If there is exactly one link remaining
+    if (filteredLinks.length == 1) {
+
+        // Send it back
+        res.send(filteredLinks[0]);
 
     } else {
 
@@ -53,25 +79,42 @@ app.get("/links/:index", (req, res) => {
 
 })
 
-// Delete a link based on its position in the array
-// A bit hacky - if we had a real database, or even a better fake one, we'd be using IDs
-app.delete("/links/:index", (req, res) => {
+// Delete a link based on its id
+app.delete("/links/:id", (req, res) => {
 
-    // Extract the index from the URL
-    const index = parseInt(req.params.index);
+    // Extract the id from the URL
+    const id = parseInt(req.params.id);
 
-    // If the index value is within bounds
-    if (0 <= index && index < links.length) {
+    // Filter the array of links to exclude that id
+    links = links.filter(l => l.id != id);
 
-        // Snip out one element at the index position
-        links = links.splice(index, 1);
+    // Report success
+    res.send({ message: "Link deleted successfully." })
 
-    } else {
+})
 
-        // Report the error in a user-friendly way
-        res.status(404).send({ error: "Unable to delete link." })
-    }
+// Add a vote to a link based on id
+app.put("/links/:id", (req, res) => {
 
+    // Extract the id from the URL
+    const id = parseInt(req.params.id);
+
+    // Loop through the links
+    links.forEach(l => {
+
+        // If the id matches
+        if (l.id == id) {
+
+            // Update the vote count
+            l.votes += 1;
+
+            // Report that the voting worked
+            res.send({ message: "Successfully voted on link. "})
+        }
+    })
+
+    // If nothing got sent before now, then there was no matching link to vote on
+    res.status(404).send({ error: "Unable to locate link." })
 })
 
 module.exports = app;
